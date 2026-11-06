@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\uch_otdel.Domain\uch_otdel.Domain.csproj" />
@@ -9,5 +9,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Только абстракции EF Core (DbSet, LINQ async); провайдеры СУБД — в Infrastructure -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.14" />
+  </ItemGroup>
 
 </Project>

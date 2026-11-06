@@ -1,0 +1,93 @@
+name: CI
+
+# Проверка при любой отправке в любую ветку; Pull Request показывает результат для своего последнего коммита.
+# workflow_dispatch — ручной запуск со страницы Actions.
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    # Настоящие СУБД для интеграционных тестов (tests/.../DatabaseProviderTests.cs)
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: Test_Passw0rd
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: Test_Passw0rd
+        ports:
+          - 1433:1433
+
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      UCH_TEST_POSTGRES: Host=localhost;Port=5432;Database=uch_otdel_test;Username=postgres;Password=Test_Passw0rd
+      UCH_TEST_SQLSERVER: Server=localhost,1433;Database=uch_otdel_test;User Id=sa;Password=Test_Passw0rd;TrustServerCertificate=True
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Test (unit + SQL Server + PostgreSQL)
+        run: dotnet test --no-build --configuration Release --logger "console;verbosity=normal"
+
+      - name: Smoke test — start the app on each database
+        run: |
+          for provider in SqlServer PostgreSql; do
+            if [ "$provider" = "SqlServer" ]; then
+              cs="Server=localhost,1433;Database=uch_otdel_smoke;User Id=sa;Password=Test_Passw0rd;TrustServerCertificate=True"
+            else
+              cs="Host=localhost;Port=5432;Database=uch_otdel_smoke;Username=postgres;Password=Test_Passw0rd"
+            fi
+            rm -f page.html page.txt
+            Database__Provider=$provider Database__ConnectionString="$cs" Database__SeedDemoData=true \
+              ASPNETCORE_URLS=http://127.0.0.1:5080 \
+              dotnet run --no-build --no-launch-profile --configuration Release --project src/uch_otdel.Web > app.log 2>&1 &
+            pid=$!
+            for i in $(seq 1 60); do
+              curl -sf http://127.0.0.1:5080/ -o page.html && break
+              sleep 2
+            done
+            kill $pid || true
+            wait $pid || true
+            # Страница открылась, миграции применены, демо-данные загружены.
+            # ASP.NET Core кодирует кириллицу в HTML (&#x...;), поэтому сначала раскодируем.
+            python3 -c "import html,sys; print(html.unescape(open('page.html', encoding='utf-8').read()))" > page.txt 2>/dev/null || true
+            if grep -q "Ахметов Е.С." page.txt && grep -q "Загрузка преподавателей" page.txt; then
+              echo "$provider: приложение запустилось, страница с данными открылась"
+            else
+              echo "::error::$provider: приложение не открыло страницу с данными"
+              cat app.log
+              exit 1
+            fi
+          done
+
+      - name: Check for vulnerable packages
+        run: |
+          dotnet list package --vulnerable --include-transitive | tee vulnerable.txt
+          if grep -q "has the following vulnerable packages" vulnerable.txt; then
+            echo "::error::Найдены пакеты с известными уязвимостями (см. вывод выше)"
+            exit 1
+          fi
