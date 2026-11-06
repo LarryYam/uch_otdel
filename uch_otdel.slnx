@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/uch_otdel.Application/uch_otdel.Application.csproj" />
+    <Project Path="src/uch_otdel.Domain/uch_otdel.Domain.csproj" />
+    <Project Path="src/uch_otdel.Infrastructure/uch_otdel.Infrastructure.csproj" />
+    <Project Path="src/uch_otdel.Migrations.PostgreSql/uch_otdel.Migrations.PostgreSql.csproj" />
+    <Project Path="src/uch_otdel.Migrations.SqlServer/uch_otdel.Migrations.SqlServer.csproj" />
+    <Project Path="src/uch_otdel.Web/uch_otdel.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/uch_otdel.Tests/uch_otdel.Tests.csproj" />
+  </Folder>
+</Solution>
