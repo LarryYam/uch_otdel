@@ -53,6 +53,35 @@ jobs:
       - name: Test (unit + SQL Server + PostgreSQL)
         run: dotnet test --no-build --configuration Release --logger "console;verbosity=normal"
 
+      - name: Smoke test — start the app on each database
+        run: |
+          for provider in SqlServer PostgreSql; do
+            if [ "$provider" = "SqlServer" ]; then
+              cs="Server=localhost,1433;Database=uch_otdel_smoke;User Id=sa;Password=Test_Passw0rd;TrustServerCertificate=True"
+            else
+              cs="Host=localhost;Port=5432;Database=uch_otdel_smoke;Username=postgres;Password=Test_Passw0rd"
+            fi
+            rm -f page.html
+            Database__Provider=$provider Database__ConnectionString="$cs" Database__SeedDemoData=true \
+              ASPNETCORE_URLS=http://127.0.0.1:5080 \
+              dotnet run --no-build --no-launch-profile --configuration Release --project src/uch_otdel.Web > app.log 2>&1 &
+            pid=$!
+            for i in $(seq 1 60); do
+              curl -sf http://127.0.0.1:5080/ -o page.html && break
+              sleep 2
+            done
+            kill $pid || true
+            wait $pid || true
+            # Страница открылась, миграции применены, демо-данные загружены
+            if grep -q "Ахметов Е.С." page.html && grep -q "Загрузка преподавателей" page.html; then
+              echo "$provider: приложение запустилось, страница с данными открылась"
+            else
+              echo "::error::$provider: приложение не открыло страницу с данными"
+              cat app.log
+              exit 1
+            fi
+          done
+
       - name: Check for vulnerable packages
         run: |
           dotnet list package --vulnerable --include-transitive | tee vulnerable.txt

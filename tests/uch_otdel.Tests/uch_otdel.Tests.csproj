@@ -23,6 +23,9 @@
     <ProjectReference Include="..\..\src\uch_otdel.Domain\uch_otdel.Domain.csproj" />
     <ProjectReference Include="..\..\src\uch_otdel.Application\uch_otdel.Application.csproj" />
     <ProjectReference Include="..\..\src\uch_otdel.Infrastructure\uch_otdel.Infrastructure.csproj" />
+    <!-- Сборки миграций нужны тесту, который применяет миграции на настоящих СУБД -->
+    <ProjectReference Include="..\..\src\uch_otdel.Migrations.SqlServer\uch_otdel.Migrations.SqlServer.csproj" />
+    <ProjectReference Include="..\..\src\uch_otdel.Migrations.PostgreSql\uch_otdel.Migrations.PostgreSql.csproj" />
   </ItemGroup>
 
 </Project>

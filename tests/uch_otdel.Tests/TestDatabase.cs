@@ -43,7 +43,16 @@ public sealed class TestDatabase : IAppDbContextFactory
     /// Настоящая СУБД: пересоздаёт схему по модели и заполняет демо-данными.
     /// Миграции здесь не нужны: проверяется, что модель и запросы работают на этой СУБД.
     /// </summary>
-    public static async Task<TestDatabase> RealAsync(DatabaseProvider provider, string connectionString)
+    public static Task<TestDatabase> RealAsync(DatabaseProvider provider, string connectionString) =>
+        CreateRealAsync(provider, connectionString, useMigrations: false);
+
+    /// <summary>
+    /// Настоящая СУБД, схема создаётся миграциями — так же, как при запуске приложения.
+    /// </summary>
+    public static Task<TestDatabase> MigratedAsync(DatabaseProvider provider, string connectionString) =>
+        CreateRealAsync(provider, connectionString, useMigrations: true);
+
+    private static async Task<TestDatabase> CreateRealAsync(DatabaseProvider provider, string connectionString, bool useMigrations)
     {
         var builder = new DbContextOptionsBuilder<AppDbContext>();
         DependencyInjection.Configure(builder, provider, connectionString);
@@ -57,7 +66,14 @@ public sealed class TestDatabase : IAppDbContextFactory
             {
                 await using var db = database.Open();
                 await db.Database.EnsureDeletedAsync();
-                await db.Database.EnsureCreatedAsync();
+                if (useMigrations)
+                {
+                    await db.Database.MigrateAsync();
+                }
+                else
+                {
+                    await db.Database.EnsureCreatedAsync();
+                }
                 await DemoDataSeeder.SeedAsync(db, database.Norms);
                 return database;
             }

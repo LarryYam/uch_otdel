@@ -9,13 +9,11 @@
 Нужны .NET 10 SDK (ставится с Visual Studio 2026) и SQL Server LocalDB
 (компонент Visual Studio «SQL Server Express LocalDB») или любой SQL Server / PostgreSQL.
 
-1. Восстановить инструменты:
+1. Восстановить инструменты (нужны только для создания новых миграций):
    ```
    dotnet tool restore
    ```
-2. Если в `src/uch_otdel.Migrations.SqlServer` ещё нет папки `Migrations`, создать первую миграцию
-   для обеих СУБД (см. `CLAUDE.md`, раздел «Миграции»).
-3. При необходимости поменять подключение в `src/uch_otdel.Web/appsettings.json`, секция `Database`:
+2. При необходимости поменять подключение в `src/uch_otdel.Web/appsettings.json`, секция `Database`:
    ```json
    "Database": {
      "Provider": "SqlServer",
@@ -24,7 +22,7 @@
    ```
    Для PostgreSQL: `"Provider": "PostgreSql"` и строка вида
    `Host=localhost;Database=uch_otdel;Username=postgres;Password=...`.
-4. Запустить:
+3. Запустить:
    ```
    dotnet run --project src/uch_otdel.Web
    ```

@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using uch_otdel.Infrastructure.Persistence;
 using Xunit.Abstractions;
 
@@ -53,5 +54,34 @@ public class DatabaseProviderTests
             _output.WriteLine($"{provider}: {name}");
             await run(await TestDatabase.RealAsync(provider, connectionString));
         }
+    }
+
+    /// <summary>
+    /// Миграции этой СУБД создают рабочую базу и не отстают от модели.
+    /// Падает, если изменили сущности или Configurations и забыли добавить миграцию.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Providers))]
+    public async Task Migrations_create_working_database_and_match_model(DatabaseProvider provider)
+    {
+        var variable = provider == DatabaseProvider.SqlServer ? "UCH_TEST_SQLSERVER" : "UCH_TEST_POSTGRES";
+        var connectionString = Environment.GetEnvironmentVariable(variable);
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            _output.WriteLine($"Пропущено: не задана переменная {variable}.");
+            return;
+        }
+
+        var database = await TestDatabase.MigratedAsync(provider, connectionString);
+
+        await using (var db = database.Open())
+        {
+            Assert.Empty(await db.Database.GetPendingMigrationsAsync());
+            Assert.False(db.Database.HasPendingModelChanges(),
+                "Модель изменилась, а миграции нет. Создайте миграцию для обеих СУБД (CLAUDE.md, «Миграции»).");
+        }
+
+        await Scenarios.TeacherLoadsAndStatuses(database);
+        await Scenarios.PlanLinks(database);
     }
 }
