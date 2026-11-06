@@ -1,9 +1,10 @@
 name: CI
 
+# Проверка при любой отправке в любую ветку; Pull Request показывает результат для своего последнего коммита.
+# workflow_dispatch — ручной запуск со страницы Actions.
 on:
   push:
-    branches: [main]
-  pull_request:
+  workflow_dispatch:
 
 jobs:
   build-and-test:
