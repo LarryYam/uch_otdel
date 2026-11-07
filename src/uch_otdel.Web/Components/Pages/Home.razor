@@ -1,130 +1,37 @@
 @page "/"
-@using System.Globalization
-@inject WorkloadService Workload
-@inject NotificationService Notifications
+@inherits ShellPage
+@inject IConfiguration Configuration
 
-<PageTitle>Загрузка преподавателей</PageTitle>
+<PageTitle>Учебный отдел</PageTitle>
 
-<h1>Загрузка преподавателей</h1>
-<p class="subtle">
-    Данные из базы: норма считается по ставке, факт — по поручениям. Ставку можно изменить прямо в таблице.
-</p>
+<section class="welcome">
+    <h1>Добро пожаловать в «Учебный отдел»</h1>
+    <p class="welcome-lead">
+        @(Configuration["Organization:Name"] ?? "Название организации") · учебный год <b>@Shell.Year</b>
+    </p>
+    <p class="subtle">
+        Расчёт и распределение учебной нагрузки: учебные планы и группы, правила расчёта, нагрузка
+        преподавателей по договорам.
+    </p>
 
-<div class="toolbar">
-    <RadzenDropDown TValue="int?" Data="@departments" TextProperty="Name" ValueProperty="Id"
-                    @bind-Value="departmentId" AllowClear="true" Placeholder="Все кафедры"
-                    Change="@(_ => LoadAsync())" Style="width: 260px" />
-    <span class="kpi-inline">Всего часов: <b>@Hours(loads.Sum(l => l.ActualHours))</b></span>
-    <span class="kpi-inline danger">Перегружено: <b>@loads.Count(l => l.Status == LoadStatus.Overload)</b></span>
-    <span class="kpi-inline warning">Недогружено: <b>@loads.Count(l => l.Status == LoadStatus.Underload)</b></span>
-</div>
+    <div class="welcome-steps">
+        @foreach (var section in AppMenu.Sections)
+        {
+            var first = section.Entries[0];
+            <a class="welcome-step" href="@first.Path">
+                <span class="welcome-step-title">@section.Title</span>
+                <span class="subtle small">@string.Join(" · ", section.Entries.Select(e => e.Text))</span>
+            </a>
+        }
+    </div>
 
-<RadzenDataGrid TItem="TeacherLoad" Data="@loads" IsLoading="@loading"
-                AllowSorting="true" AllowFiltering="true" FilterMode="FilterMode.CheckBoxList"
-                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
-                AllowColumnResize="true" Density="Density.Compact" GridLines="DataGridGridLines.Horizontal"
-                EmptyText="Нет преподавателей">
-    <Columns>
-        <RadzenDataGridColumn TItem="TeacherLoad" Property="@nameof(TeacherLoad.FullName)" Title="Преподаватель" Width="200px" />
-        <RadzenDataGridColumn TItem="TeacherLoad" Property="@nameof(TeacherLoad.Position)" Title="Должность" Width="170px" />
-        <RadzenDataGridColumn TItem="TeacherLoad" Property="@nameof(TeacherLoad.DepartmentName)" Title="Кафедра" Width="210px" />
-        <RadzenDataGridColumn TItem="TeacherLoad" Property="@nameof(TeacherLoad.Rate)" Title="Ставка" Width="110px" TextAlign="TextAlign.Right"
-                              FilterMode="FilterMode.Advanced">
-            <Template Context="l">
-                <RadzenNumeric TValue="decimal" Value="@l.Rate" Min="0" Max="2" Step="0.25" Format="0.##"
-                               Change="@(v => ChangeRateAsync(l, v))" Style="width: 90px" />
-            </Template>
-        </RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="TeacherLoad" Property="@nameof(TeacherLoad.NormHours)" Title="Норма, ч" Width="100px" TextAlign="TextAlign.Right"
-                              FilterMode="FilterMode.Advanced">
-            <Template Context="l">@Hours(l.NormHours)</Template>
-        </RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="TeacherLoad" Property="@nameof(TeacherLoad.ActualHours)" Title="Факт, ч" Width="100px" TextAlign="TextAlign.Right"
-                              FilterMode="FilterMode.Advanced">
-            <Template Context="l"><b>@Hours(l.ActualHours)</b></Template>
-        </RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="TeacherLoad" Property="@nameof(TeacherLoad.Percent)" Title="Выполнение" MinWidth="200px"
-                              FilterMode="FilterMode.Advanced">
-            <Template Context="l">
-                <div class="load-cell">
-                    <RadzenProgressBar Value="@((double)Math.Min(l.Percent, 100m))" ShowValue="false"
-                                       ProgressBarStyle="@StatusBar(l.Status)" Style="height: 8px; flex: 1" />
-                    <span>@l.Percent.ToString("0.#", Ru)%</span>
-                </div>
-            </Template>
-        </RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="TeacherLoad" Property="@nameof(TeacherLoad.Status)" Title="Статус" Width="130px">
-            <Template Context="l">
-                <RadzenBadge Text="@StatusText(l)" BadgeStyle="@StatusBadge(l.Status)" IsPill="true" />
-            </Template>
-        </RadzenDataGridColumn>
-    </Columns>
-</RadzenDataGrid>
-
-<p class="subtle small">
-    Экраны распределения поручений, сводной таблицы и связей «план — группа» переносятся из прототипа следующим шагом.
-</p>
+    <p class="subtle small">
+        Меню разделов — кнопка <RadzenIcon Icon="menu" class="welcome-inline-icon" /> слева вверху.
+        Справка, журнал и администрирование — в меню <RadzenIcon Icon="more_vert" class="welcome-inline-icon" /> справа.
+        Сообщения и предупреждения появляются в нижней панели — кнопка <RadzenIcon Icon="notes" class="welcome-inline-icon" />.
+    </p>
+</section>
 
 @code {
-    private static readonly CultureInfo Ru = CultureInfo.GetCultureInfo("ru-RU");
-
-    private List<DepartmentOption> departments = new();
-    private List<TeacherLoad> loads = new();
-    private int? departmentId;
-    private bool loading = true;
-
-    protected override async Task OnInitializedAsync()
-    {
-        departments = await Workload.GetDepartmentsAsync();
-        await LoadAsync();
-    }
-
-    private async Task LoadAsync()
-    {
-        loading = true;
-        try
-        {
-            loads = await Workload.GetTeacherLoadsAsync(departmentId);
-        }
-        finally
-        {
-            loading = false;
-        }
-    }
-
-    private async Task ChangeRateAsync(TeacherLoad load, decimal rate)
-    {
-        try
-        {
-            await Workload.SetTeacherRateAsync(load.TeacherId, rate);
-        }
-        catch (Exception ex) when (ex is uch_otdel.Domain.DomainException or uch_otdel.Application.Common.NotFoundException)
-        {
-            Notifications.Notify(NotificationSeverity.Error, "Ставка не изменена", ex.Message);
-        }
-        await LoadAsync();
-    }
-
-    private static string Hours(decimal h) => h.ToString("#,0.#", Ru);
-
-    private static string StatusText(TeacherLoad l) => l.Status switch
-    {
-        LoadStatus.Overload => $"+{Hours(l.ActualHours - l.NormHours)} ч",
-        LoadStatus.Underload => $"−{Hours(l.NormHours - l.ActualHours)} ч",
-        _ => "в норме"
-    };
-
-    private static BadgeStyle StatusBadge(LoadStatus status) => status switch
-    {
-        LoadStatus.Overload => BadgeStyle.Danger,
-        LoadStatus.Underload => BadgeStyle.Warning,
-        _ => BadgeStyle.Success
-    };
-
-    private static ProgressBarStyle StatusBar(LoadStatus status) => status switch
-    {
-        LoadStatus.Overload => ProgressBarStyle.Danger,
-        LoadStatus.Underload => ProgressBarStyle.Warning,
-        _ => ProgressBarStyle.Success
-    };
+    protected override string ScreenTitle => "Главная";
 }

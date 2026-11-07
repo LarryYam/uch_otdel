@@ -1,0 +1,35 @@
+@page "/workload"
+@inherits ShellPage
+@inject CalculationService Calculation
+
+<PageTitle>Нагрузка</PageTitle>
+
+<ScreenStub Description="Главный грид нагрузки: строки поручений, коэффициент, процент загрузки, предупреждения." />
+
+<p class="subtle small">
+    «Расчёт / пересчёт» — пробный: идёт несколько секунд в фоне, данные не меняет. О начале и окончании
+    узнают все открытые вкладки — нижняя панель откроется сама. Откройте приложение во второй вкладке, чтобы проверить.
+</p>
+
+@code {
+    protected override string ScreenTitle => "Нагрузка";
+
+    protected override IReadOnlyList<ShellCommand> BuildCommands() =>
+    [
+        new("Расчёт / пересчёт", "calculate", StartCalculation),
+        Stub("Разбить / собрать строку", "call_split"),
+        Stub("Создать / удалить поток", "merge"),
+        Stub("Назначить преподавателя", "person_add"),
+        Stub("Коэффициент", "percent"),
+    ];
+
+    private Task StartCalculation()
+    {
+        if (!Calculation.TryStart(Shell.UserName))
+        {
+            Shell.Post(new AppEvent("Расчёт уже выполняется", "Дождитесь его окончания.",
+                AppEventSeverity.Warning, Important: true));
+        }
+        return Task.CompletedTask;
+    }
+}

@@ -1,0 +1,16 @@
+@page "/norms"
+@inherits ShellPage
+
+<PageTitle>Нормы</PageTitle>
+
+<ScreenStub Description="Таблица норм по образцу положения о нормировании, привязка к дереву детализации." />
+
+@code {
+    protected override string ScreenTitle => "Нормы";
+
+    protected override IReadOnlyList<ShellCommand> BuildCommands() => Stubs(
+        ("Добавить норму", "add"),
+        ("Копировать", "content_copy"),
+        ("Пересчитать по новым нормам", "calculate"),
+        ("Удалить", "delete"));
+}

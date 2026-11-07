@@ -56,48 +56,312 @@ html, body {
     font-size: 14px;
 }
 
-.app-header {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-    padding: 10px 20px;
-    background: #1f2b44;
-    color: #fff;
+/* ---------- Каркас: шапка, левое меню, нижняя панель ---------- */
+:root {
+    --shell-header-height: 60px;
 }
 
-.app-brand {
+.shell-header {
+    position: fixed;
+    inset: 0 0 auto 0;
+    height: var(--shell-header-height);
+    z-index: 1100;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
+    padding: 0 8px 0 4px;
+    background: var(--lp-surface);
+    border-bottom: 1px solid var(--lp-border);
+    box-sizing: border-box;
+}
+
+.shell-org {
+    flex: 0 1 220px;
+    min-width: 0;
     font-weight: 600;
     font-size: 15px;
+    line-height: 1.2;
+    color: var(--lp-text);
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
 }
 
-.app-nav {
+.shell-context {
+    flex: 0 0 auto;
     display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 150px;
+    max-width: 240px;
+}
+
+.shell-year.rz-dropdown {
+    height: 22px;
+    min-height: 22px;
+    width: 120px;
+    font-size: 12px;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+    padding: 0;
+}
+
+.shell-year .rz-dropdown-label {
+    padding: 0 4px 0 0;
+    color: var(--lp-muted);
+}
+
+.shell-title {
+    font-weight: 600;
+    font-size: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.shell-commands {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.shell-commands-track {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    gap: 6px;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+}
+
+.shell-commands-track > .rz-button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+.shell-right {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
     gap: 4px;
 }
 
-.app-nav a {
-    color: #c9d3e6;
+.shell-messages-toggle {
+    position: relative;
+}
+
+.shell-unread {
+    position: absolute;
+    top: 0;
+    right: 0;
+    pointer-events: none;
+}
+
+.shell-menu.rz-profile-menu {
+    border: none;
+    background: transparent;
+}
+
+.shell-menu .rz-navigation-menu {
+    right: 0;
+    left: auto;
+    min-width: 260px;
+}
+
+.shell-account-card .rz-navigation-item-link {
+    display: block;
+    cursor: default;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--lp-border);
+}
+
+.shell-account-name {
+    font-weight: 600;
+}
+
+/* Левое меню и нижняя панель открываются поверх рабочей области */
+.shell-backdrop {
+    position: fixed;
+    inset: var(--shell-header-height) 0 0 0;
+    z-index: 1000;
+    background: rgba(20, 26, 38, .25);
+}
+
+.shell-nav {
+    position: fixed;
+    top: var(--shell-header-height);
+    bottom: 0;
+    left: 0;
+    width: 300px;
+    max-width: 85vw;
+    z-index: 1001;
+    overflow-y: auto;
+    background: var(--lp-surface);
+    border-right: 1px solid var(--lp-border);
+    box-shadow: 4px 0 16px rgba(0, 0, 0, .12);
+    padding: 8px 0 16px;
+}
+
+.shell-nav-section {
+    padding: 12px 16px 4px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--lp-muted);
+}
+
+.shell-nav .rz-panel-menu {
+    border: none;
+    background: transparent;
+}
+
+.shell-body {
+    padding: calc(var(--shell-header-height) + 16px) 20px 24px;
+}
+
+.shell-panel {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 35vh;
+    min-height: 160px;
+    z-index: 1050;
+    display: flex;
+    flex-direction: column;
+    background: var(--lp-surface);
+    border-top: 1px solid var(--lp-border);
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, .12);
+}
+
+.shell-panel-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 8px 4px 16px;
+    border-bottom: 1px solid var(--lp-border);
+}
+
+.shell-spacer {
+    flex: 1;
+}
+
+.shell-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 16px;
+}
+
+.shell-message {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 4px 0;
+    border-bottom: 1px dashed var(--lp-border);
+}
+
+.shell-message .rzi {
+    font-size: 18px;
+    align-self: center;
+}
+
+.shell-message-info .rzi { color: var(--lp-accent); }
+.shell-message-warning .rzi { color: var(--lp-warning); }
+.shell-message-error .rzi { color: var(--lp-danger); }
+
+.shell-message-time {
+    color: var(--lp-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.shell-message-title {
+    font-weight: 600;
+}
+
+/* ---------- Стартовая страница и заглушки экранов ---------- */
+.welcome {
+    max-width: 880px;
+    margin: 24px auto;
+}
+
+.welcome h1 {
+    font-size: 28px;
+    margin-bottom: 8px;
+}
+
+.welcome-lead {
+    font-size: 16px;
+    margin: 0 0 8px;
+}
+
+.welcome-steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+    margin: 24px 0;
+    counter-reset: step;
+}
+
+.welcome-step {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 16px;
+    background: var(--lp-surface);
+    border: 1px solid var(--lp-border);
+    border-radius: 8px;
+    color: var(--lp-text);
     text-decoration: none;
-    padding: 5px 12px;
-    border-radius: 6px;
-    font-weight: 500;
+    counter-increment: step;
 }
 
-.app-nav a:hover {
-    color: #fff;
-    background: rgba(255, 255, 255, .08);
+.welcome-step:hover {
+    border-color: var(--lp-accent);
 }
 
-.app-nav a.active {
-    color: #fff;
-    background: rgba(255, 255, 255, .16);
+.welcome-step-title {
+    font-weight: 600;
+    font-size: 16px;
 }
 
-.app-body {
-    padding: 16px 20px 24px;
+.welcome-step-title::before {
+    content: counter(step) ". ";
+    color: var(--lp-accent);
+}
+
+.welcome-inline-icon {
+    font-size: 16px;
+    vertical-align: text-bottom;
+}
+
+.screen-stub {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 8px 0 16px;
+    padding: 20px;
+    background: var(--lp-surface);
+    border: 1px dashed var(--lp-border);
+    border-radius: 8px;
+}
+
+.screen-stub-icon {
+    font-size: 36px;
+    color: var(--lp-muted);
+}
+
+.screen-stub-title {
+    font-weight: 600;
+    font-size: 16px;
+    margin-bottom: 4px;
 }
 
 h1 {

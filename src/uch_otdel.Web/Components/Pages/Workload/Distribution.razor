@@ -1,0 +1,15 @@
+@page "/workload/distribution"
+@inherits ShellPage
+
+<PageTitle>Распределение</PageTitle>
+
+<ScreenStub Description="Распределение нагрузки кафедры между договорами, процент загрузки." />
+
+@code {
+    protected override string ScreenTitle => "Распределение";
+
+    protected override IReadOnlyList<ShellCommand> BuildCommands() => Stubs(
+        ("Назначить", "person_add"),
+        ("Снять назначение", "person_remove"),
+        ("Передать другому", "swap_horiz"));
+}

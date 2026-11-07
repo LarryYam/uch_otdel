@@ -1,0 +1,15 @@
+@page "/contracts"
+@inherits ShellPage
+
+<PageTitle>Договоры ППС</PageTitle>
+
+<ScreenStub Description="Договоры преподавателей: вид занятости, должность, кафедра, ставка, срок." />
+
+@code {
+    protected override string ScreenTitle => "Договоры ППС";
+
+    protected override IReadOnlyList<ShellCommand> BuildCommands() => Stubs(
+        ("Добавить договор", "add"),
+        ("Закрыть договор", "event_busy"),
+        ("Удалить", "delete"));
+}

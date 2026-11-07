@@ -5,6 +5,7 @@ using uch_otdel.Infrastructure;
 using uch_otdel.Infrastructure.Persistence;
 using uch_otdel.Web.Components;
 using uch_otdel.Web.Localization;
+using uch_otdel.Web.Shell;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +24,9 @@ builder.Services.AddRazorComponents()
 // Русские надписи Radzen регистрируются до AddRadzenComponents()
 builder.Services.AddSingleton<ILocalizer, RuLocalizer>();
 builder.Services.AddRadzenComponents();
+
+// Каркас: состояние своё у каждой вкладки (год, команды ленты, сообщения нижней панели)
+builder.Services.AddScoped<ShellState>();
 
 var app = builder.Build();
 

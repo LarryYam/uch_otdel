@@ -1,0 +1,15 @@
+@page "/plans"
+@inherits ShellPage
+
+<PageTitle>Учебные планы</PageTitle>
+
+<ScreenStub Description="Список учебных планов, загрузка и перезагрузка .plx, пометки «план изменился», точечная правка плана." />
+
+@code {
+    protected override string ScreenTitle => "Учебные планы";
+
+    protected override IReadOnlyList<ShellCommand> BuildCommands() => Stubs(
+        ("Загрузить .plx", "upload_file"),
+        ("Перезагрузить план", "sync"),
+        ("Удалить план", "delete"));
+}

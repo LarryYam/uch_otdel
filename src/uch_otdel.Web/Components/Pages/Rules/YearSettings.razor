@@ -1,0 +1,14 @@
+@page "/year-settings"
+@inherits ShellPage
+
+<PageTitle>Настройки года</PageTitle>
+
+<ScreenStub Description="Нормы часов на ставку по должностям, способ применения коэффициента." />
+
+@code {
+    protected override string ScreenTitle => "Настройки года";
+
+    protected override IReadOnlyList<ShellCommand> BuildCommands() => Stubs(
+        ("Добавить норму часов", "add"),
+        ("Способ коэффициента", "percent"));
+}
