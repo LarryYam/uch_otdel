@@ -1,0 +1,15 @@
+@page "/dictionaries"
+@inherits ShellPage
+
+<PageTitle>Справочники</PageTitle>
+
+<ScreenStub Description="Источники финансирования, дисциплины, должности, виды занятости." />
+
+@code {
+    protected override string ScreenTitle => "Справочники";
+
+    protected override IReadOnlyList<ShellCommand> BuildCommands() => Stubs(
+        ("Добавить", "add"),
+        ("Объединить дисциплины", "merge"),
+        ("Удалить", "delete"));
+}

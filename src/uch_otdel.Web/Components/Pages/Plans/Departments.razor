@@ -1,0 +1,15 @@
+@page "/departments"
+@inherits ShellPage
+
+<PageTitle>Подразделения</PageTitle>
+
+<ScreenStub Description="Дерево структурных подразделений с версиями во времени, карточка узла, образовательные программы кафедры." />
+
+@code {
+    protected override string ScreenTitle => "Подразделения";
+
+    protected override IReadOnlyList<ShellCommand> BuildCommands() => Stubs(
+        ("Добавить", "add"),
+        ("Реорганизация с даты", "swap_horiz"),
+        ("Удалить", "delete"));
+}

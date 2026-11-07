@@ -1,23 +1,217 @@
 @inherits LayoutComponentBase
+@implements IDisposable
+@inject ShellState Shell
+@inject NavigationManager Navigation
+@inject IConfiguration Configuration
+@inject IJSRuntime JS
+@inject NotificationService Notifications
 
 <RadzenComponents />
 
-<header class="app-header">
-    <div class="app-brand">
-        <RadzenIcon Icon="school" />
-        <span>Учебный отдел</span>
+@* ── Шапка: единственная постоянная панель ── *@
+<header class="shell-header">
+    <RadzenButton Icon="menu" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base"
+                  Click="@ToggleNav" title="Меню разделов" aria-label="Меню разделов" />
+
+    <a class="shell-org" href="">@OrganizationName</a>
+
+    <div class="shell-context">
+        <RadzenDropDown TValue="string" Data="@Shell.Years" @bind-Value="@Year"
+                        class="shell-year" title="Учебный год" />
+        <div class="shell-title">@Shell.Title</div>
     </div>
-    <nav class="app-nav">
-        <NavLink href="" Match="NavLinkMatch.All">Загрузка преподавателей</NavLink>
-    </nav>
+
+    <div class="shell-commands">
+        <RadzenButton Icon="chevron_left" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" Size="ButtonSize.Small"
+                      Click="@(() => ScrollCommands(-240))" title="Прокрутить команды влево" aria-label="Прокрутить команды влево" />
+        <div class="shell-commands-track" @ref="commandsTrack">
+            @foreach (var command in Shell.Commands)
+            {
+                <RadzenButton Text="@command.Text" Icon="@command.Icon" Variant="Variant.Outlined"
+                              ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small"
+                              Click="@(() => RunCommandAsync(command))" />
+            }
+        </div>
+        <RadzenButton Icon="chevron_right" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" Size="ButtonSize.Small"
+                      Click="@(() => ScrollCommands(240))" title="Прокрутить команды вправо" aria-label="Прокрутить команды вправо" />
+    </div>
+
+    <div class="shell-right">
+        <div class="shell-messages-toggle">
+            <RadzenButton Icon="notes" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base"
+                          Click="@Shell.TogglePanel" title="Нижняя панель: сообщения" aria-label="Нижняя панель: сообщения" />
+            @if (Shell.UnreadCount > 0)
+            {
+                <RadzenBadge BadgeStyle="BadgeStyle.Danger" IsPill="true" Text="@Shell.UnreadCount.ToString()" class="shell-unread" />
+            }
+        </div>
+
+        @* Меню аккаунта *@
+        <RadzenProfileMenu ShowIcon="false" Click="@OnMenuClick" class="shell-menu" title="Аккаунт">
+            <Template>
+                <RadzenIcon Icon="account_circle" />
+            </Template>
+            <ChildContent>
+                <RadzenProfileMenuItem Value="account" class="shell-account-card">
+                    <Template>
+                        <div class="shell-account-name">@Shell.UserName</div>
+                        <div class="subtle small">Учебный год в этой вкладке: @Shell.Year</div>
+                    </Template>
+                </RadzenProfileMenuItem>
+                @foreach (var entry in AppMenu.AccountMenu)
+                {
+                    <RadzenProfileMenuItem Text="@entry.Text" Icon="@entry.Icon" Path="@entry.Path" />
+                }
+                <RadzenProfileMenuItem Text="Выход" Icon="logout" Value="logout" />
+            </ChildContent>
+        </RadzenProfileMenu>
+
+        @* Системное меню ⋮ *@
+        <RadzenProfileMenu ShowIcon="false" class="shell-menu" title="Системное меню">
+            <Template>
+                <RadzenIcon Icon="more_vert" />
+            </Template>
+            <ChildContent>
+                @foreach (var entry in AppMenu.SystemMenu)
+                {
+                    <RadzenProfileMenuItem Text="@entry.Text" Icon="@entry.Icon" Path="@entry.Path" />
+                }
+            </ChildContent>
+        </RadzenProfileMenu>
+    </div>
 </header>
 
-<main class="app-body">
+@* ── Левое меню разделов: поверх рабочей области ── *@
+@if (navOpen)
+{
+    <div class="shell-backdrop" @onclick="@CloseNav"></div>
+    <nav class="shell-nav" aria-label="Разделы">
+        @foreach (var section in AppMenu.Sections)
+        {
+            <div class="shell-nav-section">@section.Title</div>
+            <RadzenPanelMenu ShowArrow="false">
+                @foreach (var entry in section.Entries)
+                {
+                    <RadzenPanelMenuItem Text="@entry.Text" Icon="@entry.Icon" Path="@entry.Path" />
+                }
+            </RadzenPanelMenu>
+        }
+    </nav>
+}
+
+@* ── Рабочая область: вся ширина экрана ── *@
+<main class="shell-body">
     @Body
 </main>
+
+@* ── Нижняя панель: по умолчанию скрыта, поверх рабочей области ── *@
+@if (Shell.IsPanelOpen)
+{
+    <section class="shell-panel" aria-label="Нижняя панель">
+        <div class="shell-panel-head">
+            <b>Сообщения</b>
+            <span class="subtle">@Shell.Title</span>
+            <span class="shell-spacer"></span>
+            <RadzenButton Text="Очистить" Icon="delete_sweep" Variant="Variant.Text" Size="ButtonSize.Small"
+                          Click="@Shell.ClearMessages" />
+            <RadzenButton Icon="close" Variant="Variant.Text" ButtonStyle="ButtonStyle.Base" Size="ButtonSize.Small"
+                          Click="@(() => Shell.SetPanelOpen(false))" title="Свернуть" aria-label="Свернуть" />
+        </div>
+        <div class="shell-panel-body">
+            @{ var messages = Shell.Messages; }
+            @if (messages.Count == 0)
+            {
+                <div class="subtle">Сообщений нет.</div>
+            }
+            @foreach (var m in messages)
+            {
+                <div class="shell-message shell-message-@m.Severity.ToString().ToLowerInvariant()">
+                    <RadzenIcon Icon="@SeverityIcon(m.Severity)" />
+                    <span class="shell-message-time">@m.OccurredAtUtc.ToLocalTime().ToString("HH:mm:ss")</span>
+                    <span class="shell-message-title">@m.Title</span>
+                    @if (!string.IsNullOrEmpty(m.Text))
+                    {
+                        <span class="subtle">@m.Text</span>
+                    }
+                </div>
+            }
+        </div>
+    </section>
+}
 
 <div id="blazor-error-ui" data-nosnippet>
     Произошла ошибка.
     <a href="." class="reload">Перезагрузить</a>
     <span class="dismiss">🗙</span>
 </div>
+
+@code {
+    private ElementReference commandsTrack;
+    private bool navOpen;
+
+    private string OrganizationName => Configuration["Organization:Name"] ?? "Название организации";
+
+    private string Year
+    {
+        get => Shell.Year;
+        set => Shell.SetYear(value);
+    }
+
+    protected override void OnInitialized()
+    {
+        Shell.Changed += OnShellChanged;
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    // События приходят и из других потоков (рассылка), поэтому перерисовка — через InvokeAsync
+    private void OnShellChanged() => _ = InvokeAsync(StateHasChanged);
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        if (navOpen)
+        {
+            navOpen = false;
+            _ = InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void ToggleNav() => navOpen = !navOpen;
+
+    private void CloseNav() => navOpen = false;
+
+    private async Task ScrollCommands(int dx) =>
+        await JS.InvokeVoidAsync("uchShell.scrollBy", commandsTrack, dx);
+
+    private async Task RunCommandAsync(ShellCommand command)
+    {
+        try
+        {
+            await command.Execute();
+        }
+        catch (Exception ex) when (ex is uch_otdel.Domain.DomainException or uch_otdel.Application.Common.NotFoundException)
+        {
+            Notifications.Notify(NotificationSeverity.Error, command.Text, ex.Message);
+        }
+    }
+
+    private void OnMenuClick(RadzenProfileMenuItem item)
+    {
+        if (item.Value == "logout")
+        {
+            Shell.Post(new AppEvent("Выход", "Заглушка каркаса: вход в систему ещё не настроен.", Important: true));
+        }
+    }
+
+    private static string SeverityIcon(AppEventSeverity severity) => severity switch
+    {
+        AppEventSeverity.Error => "error",
+        AppEventSeverity.Warning => "warning",
+        _ => "info"
+    };
+
+    public void Dispose()
+    {
+        Shell.Changed -= OnShellChanged;
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+}

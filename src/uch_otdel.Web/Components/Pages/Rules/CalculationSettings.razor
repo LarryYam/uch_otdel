@@ -1,0 +1,15 @@
+@page "/calc-settings"
+@inherits ShellPage
+
+<PageTitle>Настройки расчёта</PageTitle>
+
+<ScreenStub Description="Правила деления на подгруппы и правила формирования потоков по дереву детализации." />
+
+@code {
+    protected override string ScreenTitle => "Настройки расчёта";
+
+    protected override IReadOnlyList<ShellCommand> BuildCommands() => Stubs(
+        ("Правило подгрупп", "call_split"),
+        ("Правило потоков", "merge"),
+        ("Удалить правило", "delete"));
+}

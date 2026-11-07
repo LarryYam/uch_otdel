@@ -1,0 +1,15 @@
+@page "/workload/streams"
+@inherits ShellPage
+
+<PageTitle>Подгруппы и потоки</PageTitle>
+
+<ScreenStub Description="Подгруппы групп, ручное и автоматическое объединение в потоки, первая группа потока." />
+
+@code {
+    protected override string ScreenTitle => "Подгруппы и потоки";
+
+    protected override IReadOnlyList<ShellCommand> BuildCommands() => Stubs(
+        ("Собрать потоки", "merge"),
+        ("Создать поток", "add"),
+        ("Расформировать поток", "call_split"));
+}

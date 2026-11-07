@@ -1,0 +1,14 @@
+@page "/journal"
+@inherits ShellPage
+
+<PageTitle>Журнал изменений</PageTitle>
+
+<ScreenStub Description="Полный журнал изменений выбранного учебного года, откат к дате и времени по области с комментарием." />
+
+@code {
+    protected override string ScreenTitle => "Журнал изменений";
+
+    protected override IReadOnlyList<ShellCommand> BuildCommands() => Stubs(
+        ("Откат к дате", "restore"),
+        ("Фильтр по области", "filter_alt"));
+}

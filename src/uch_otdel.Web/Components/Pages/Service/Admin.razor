@@ -1,0 +1,15 @@
+@page "/admin"
+@inherits ShellPage
+
+<PageTitle>Администрирование</PageTitle>
+
+<ScreenStub Description="Пользователи, роли, функции и области прав." />
+
+@code {
+    protected override string ScreenTitle => "Администрирование";
+
+    protected override IReadOnlyList<ShellCommand> BuildCommands() => Stubs(
+        ("Добавить пользователя", "person_add"),
+        ("Роли", "group"),
+        ("Обновления", "system_update"));
+}

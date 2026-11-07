@@ -1,0 +1,15 @@
+@page "/groups"
+@inherits ShellPage
+
+<PageTitle>Группы</PageTitle>
+
+<ScreenStub Description="Группы, контингент по источникам финансирования, связи «план — группа», индивидуальные планы студентов." />
+
+@code {
+    protected override string ScreenTitle => "Группы";
+
+    protected override IReadOnlyList<ShellCommand> BuildCommands() => Stubs(
+        ("Добавить группу", "group_add"),
+        ("Контингент", "people"),
+        ("Связать с планом", "link"));
+}

@@ -1,0 +1,16 @@
+@* Заглушка экрана каркаса: показывает, что экран ещё в разработке. *@
+
+<section class="screen-stub">
+    <RadzenIcon Icon="construction" class="screen-stub-icon" />
+    <div>
+        <div class="screen-stub-title">Экран в разработке</div>
+        <div class="subtle">@Description</div>
+        <div class="subtle small">Команды в ленте шапки — заглушки: нажатие пишет сообщение в нижнюю панель.</div>
+    </div>
+</section>
+
+@code {
+    /// <summary>Что будет на экране.</summary>
+    [Parameter]
+    public string? Description { get; set; }
+}

@@ -1,0 +1,140 @@
+@page "/workload/teachers"
+@inherits ShellPage
+@using System.Globalization
+@inject WorkloadService Workload
+@inject NotificationService Notifications
+
+<PageTitle>Загрузка преподавателей</PageTitle>
+
+<p class="subtle">
+    Данные из базы: норма считается по ставке, факт — по поручениям. Ставку можно изменить прямо в таблице.
+</p>
+
+<div class="toolbar">
+    <RadzenDropDown TValue="int?" Data="@departments" TextProperty="Name" ValueProperty="Id"
+                    @bind-Value="departmentId" AllowClear="true" Placeholder="Все кафедры"
+                    Change="@(_ => LoadAsync())" Style="width: 260px" />
+    <span class="kpi-inline">Всего часов: <b>@Hours(loads.Sum(l => l.ActualHours))</b></span>
+    <span class="kpi-inline danger">Перегружено: <b>@loads.Count(l => l.Status == LoadStatus.Overload)</b></span>
+    <span class="kpi-inline warning">Недогружено: <b>@loads.Count(l => l.Status == LoadStatus.Underload)</b></span>
+</div>
+
+<RadzenDataGrid TItem="TeacherLoad" Data="@loads" IsLoading="@loading"
+                AllowSorting="true" AllowFiltering="true" FilterMode="FilterMode.CheckBoxList"
+                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                AllowColumnResize="true" Density="Density.Compact" GridLines="DataGridGridLines.Horizontal"
+                EmptyText="Нет преподавателей">
+    <Columns>
+        <RadzenDataGridColumn TItem="TeacherLoad" Property="@nameof(TeacherLoad.FullName)" Title="Преподаватель" Width="200px" />
+        <RadzenDataGridColumn TItem="TeacherLoad" Property="@nameof(TeacherLoad.Position)" Title="Должность" Width="170px" />
+        <RadzenDataGridColumn TItem="TeacherLoad" Property="@nameof(TeacherLoad.DepartmentName)" Title="Кафедра" Width="210px" />
+        <RadzenDataGridColumn TItem="TeacherLoad" Property="@nameof(TeacherLoad.Rate)" Title="Ставка" Width="110px" TextAlign="TextAlign.Right"
+                              FilterMode="FilterMode.Advanced">
+            <Template Context="l">
+                <RadzenNumeric TValue="decimal" Value="@l.Rate" Min="0" Max="2" Step="0.25" Format="0.##"
+                               Change="@(v => ChangeRateAsync(l, v))" Style="width: 90px" />
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="TeacherLoad" Property="@nameof(TeacherLoad.NormHours)" Title="Норма, ч" Width="100px" TextAlign="TextAlign.Right"
+                              FilterMode="FilterMode.Advanced">
+            <Template Context="l">@Hours(l.NormHours)</Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="TeacherLoad" Property="@nameof(TeacherLoad.ActualHours)" Title="Факт, ч" Width="100px" TextAlign="TextAlign.Right"
+                              FilterMode="FilterMode.Advanced">
+            <Template Context="l"><b>@Hours(l.ActualHours)</b></Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="TeacherLoad" Property="@nameof(TeacherLoad.Percent)" Title="Выполнение" MinWidth="200px"
+                              FilterMode="FilterMode.Advanced">
+            <Template Context="l">
+                <div class="load-cell">
+                    <RadzenProgressBar Value="@((double)Math.Min(l.Percent, 100m))" ShowValue="false"
+                                       ProgressBarStyle="@StatusBar(l.Status)" Style="height: 8px; flex: 1" />
+                    <span>@l.Percent.ToString("0.#", Ru)%</span>
+                </div>
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="TeacherLoad" Property="@nameof(TeacherLoad.Status)" Title="Статус" Width="130px">
+            <Template Context="l">
+                <RadzenBadge Text="@StatusText(l)" BadgeStyle="@StatusBadge(l.Status)" IsPill="true" />
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+
+@code {
+    protected override string ScreenTitle => "Загрузка преподавателей";
+
+    protected override IReadOnlyList<ShellCommand> BuildCommands() =>
+    [
+        new("Обновить", "refresh", RefreshAsync),
+    ];
+
+    private static readonly CultureInfo Ru = CultureInfo.GetCultureInfo("ru-RU");
+
+    private List<DepartmentOption> departments = new();
+    private List<TeacherLoad> loads = new();
+    private int? departmentId;
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        departments = await Workload.GetDepartmentsAsync();
+        await LoadAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        await LoadAsync();
+        StateHasChanged();
+    }
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        try
+        {
+            loads = await Workload.GetTeacherLoadsAsync(departmentId);
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task ChangeRateAsync(TeacherLoad load, decimal rate)
+    {
+        try
+        {
+            await Workload.SetTeacherRateAsync(load.TeacherId, rate);
+        }
+        catch (Exception ex) when (ex is uch_otdel.Domain.DomainException or uch_otdel.Application.Common.NotFoundException)
+        {
+            Notifications.Notify(NotificationSeverity.Error, "Ставка не изменена", ex.Message);
+        }
+        await LoadAsync();
+    }
+
+    private static string Hours(decimal h) => h.ToString("#,0.#", Ru);
+
+    private static string StatusText(TeacherLoad l) => l.Status switch
+    {
+        LoadStatus.Overload => $"+{Hours(l.ActualHours - l.NormHours)} ч",
+        LoadStatus.Underload => $"−{Hours(l.NormHours - l.ActualHours)} ч",
+        _ => "в норме"
+    };
+
+    private static BadgeStyle StatusBadge(LoadStatus status) => status switch
+    {
+        LoadStatus.Overload => BadgeStyle.Danger,
+        LoadStatus.Underload => BadgeStyle.Warning,
+        _ => BadgeStyle.Success
+    };
+
+    private static ProgressBarStyle StatusBar(LoadStatus status) => status switch
+    {
+        LoadStatus.Overload => ProgressBarStyle.Danger,
+        LoadStatus.Underload => ProgressBarStyle.Warning,
+        _ => ProgressBarStyle.Success
+    };
+}
